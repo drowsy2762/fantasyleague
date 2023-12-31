@@ -1,18 +1,4 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-
-void main() {
-  runApp(const MyApp());
-}
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
-}
-=======
 import 'draft.dart';
 
 void main() {
@@ -44,4 +30,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
->>>>>>> 408a80a (일단 main과 draftpage 분리 성공)
