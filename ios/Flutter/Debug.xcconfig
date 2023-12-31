@@ -1,1 +1,5 @@
+<<<<<<< HEAD
+=======
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+>>>>>>> 408a80a (일단 main과 draftpage 분리 성공)
 #include "Generated.xcconfig"
