@@ -33,23 +33,7 @@ class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
           bottom: TabBar(
             tabs: [
               Tab(text: 'Draft Order'),
-              Tab(
-                child:
-                DropdownButton<String>(
-                  value: selectedPlayer,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedPlayer = newValue;
-                    });
-                  },
-                  items: users.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-              ),
+              Tab(text: 'Player Draftnow'),
             ],
           ),
         ),
