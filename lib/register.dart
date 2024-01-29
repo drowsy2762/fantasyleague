@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main.dart';
 
-
-class LoginScreen extends StatelessWidget {
+class RegistrationScreen extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -11,7 +10,7 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Login'),
+        title: Text('Register'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -29,20 +28,29 @@ class LoginScreen extends StatelessWidget {
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
-                final response = await supabase.auth.signUp(
+                final AuthResponse res = await supabase.auth.signUp(
                   email: emailController.text,
                   password: passwordController.text,
                 );
 
-                if (response.session == null) {
-                  // Login successful
-                  print('User logged in successfully');
+                if (res.session == null) {
+                  // Registration successful
+                  print('User registered successfully');
                 } else {
-                  // Handle login error
-                  print('Login error: ${response.user}');
+                  // Handle registration error
+                  print('Registration error: ${res.user}');
                 }
               },
-              child: Text('Login'),
+              child: Text('Register'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final response = await supabase.auth.signInWithSSO(
+                  domain: "google.com"
+                );
+                print(response);
+              },
+              child: Text('Sign Up with Google'),
             ),
           ],
         ),
