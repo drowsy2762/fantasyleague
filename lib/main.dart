@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'config.dart';
-import 'login.dart';
+import 'draft.dart';
+import 'LoginScreen.dart';
 
 Future<void> main() async {
   Supabase.initialize(url: 'https://vwjdztadfyfukborxnwe.supabase.co',

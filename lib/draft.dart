@@ -1,7 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'user.dart';
+import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
+import 'main.dart';
 
 class Player {
   final String name;
@@ -19,71 +22,95 @@ class Player {
 }
 
 class DraftState {
-  List<User> users;
-  int currentTurn;
+  List<String> users = [];
+  int currentTurn = 0;
 
-  DraftState(this.users, this.currentTurn);
-
-  User get currentUser => users[currentTurn];
+  String get currentUser => users.isNotEmpty ? users[currentTurn] : '';
 
   void nextTurn() {
     currentTurn = (currentTurn + 1) % users.length;
   }
-}
 
-
-class User {
-  final String name;
-  final List<Player> team = [];
-
-  User(this.name);
-
-  Future<void> draftPlayer(Player player) {
-    team.add(player);
-    return SupabaseClient(Config.supabaseUrl, Config.supabaseKey)
-        .from('teams')
-        .upsert({'userId': name, 'playerName': player.name});
+  Future<void> getRoomUsers(int roomId) async {
+    try {
+      final response =
+          await supabase.from('rooms').select('users').eq('room_id', roomId);
+      List<Map<String, dynamic>> newUsers =
+          (jsonDecode(jsonEncode(response[0]['users'])) as List)
+              .map((user) => jsonDecode(user) as Map<String, dynamic>)
+              .toList();
+      users = newUsers.map((user) => user['user_uid'] as String).toList();
+    } catch (e) {
+      print('Failed to get room users: $e');
+    }
   }
 }
 
 class FantasyLeagueDraft extends StatefulWidget {
-  final DraftState draftState;
+  final room_id;
 
-  FantasyLeagueDraft(this.draftState);
+  FantasyLeagueDraft(this.room_id);
 
   @override
-  _FantasyLeagueDraftState createState() => _FantasyLeagueDraftState();
+  _FantasyLeagueDraftState createState() => _FantasyLeagueDraftState(room_id);
 }
 
 class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
-  List<Player> players = []; // Add this line
-  List<User> users = [User('User 1'), User('User 2'), User('User 3')]; // Placeholder user data
+  List<Player> players = []; // Add this line인
+  List<String> users = [];
+  String? selectedUser;
   Player? selectedPlayer;
   String? selectedTeam;
   String? selectedPosition;
+
+  final room_id;
+  late final DraftState draftState = DraftState();
+
+  // users는 rooms 테이블에 있는 users 컬럼을 가져와야함
+
+  _FantasyLeagueDraftState(this.room_id);
 
   @override
   void initState() {
     super.initState();
     initPlayers();
-    loadPlayers();
+    draftState.getRoomUsers(room_id);
+  }
+
+  void getRoomUsers() async {
+    try {
+      final response =
+          await supabase.from('rooms').select('users').eq('room_id', room_id);
+      print('response1 : $response');
+      List<String> newUsers = (response[0]['users'] as List)
+          .map((user) => Users(user).toString())
+          .toList();
+      users.addAll(newUsers);
+      print('users : $users');
+    } catch (e) {
+      print('Failed to get room users: $e');
+    }
   }
 
   Future<void> initPlayers() async {
-    final response = await SupabaseClient(Config.supabaseUrl, Config.supabaseKey)
-        .from('players')
-        .select('jurseynumber, name, team, position');
+    try {
+      final response =
+      await supabase
+          .from('players').select('jurseynumber, name, team, position');
 
-    print(response);
-  }
+      final data = response as List<Map<String, dynamic>>;
+      players = data.map((playerData) => Player(
+        playerData['name'] ?? '',
+        playerData['id'] ?? '',
+        playerData['jurseynumber'].toString() ?? '',
+        playerData['team'] ?? '',
+        playerData['position'] ?? '',
+      )).toList();
 
-  Future<void> loadPlayers() async {
-    final response = await SupabaseClient(Config.supabaseUrl, Config.supabaseKey)
-        .from('players')
-        .select('jurseynumber, name, team, position');
-
-    final data = response as List<Map<String, dynamic>>;
-
+      print('players: $players');
+    } catch (e) {
+      print('Failed to get players: $e');
+    }
   }
 
   @override
@@ -97,18 +124,17 @@ class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
             tabs: [
               Tab(text: 'Draft Order'),
               Tab(
-                child:
-                DropdownButton<Player>(
-                  value: selectedPlayer,
-                  onChanged: (Player? newValue) {
+                child: DropdownButton<String>(
+                  value: selectedUser,
+                  onChanged: (String? newValue) {
                     setState(() {
-                      selectedPlayer = newValue;
+                      selectedUser = newValue;
                     });
                   },
-                  items: users[0].team.map<DropdownMenuItem<Player>>((Player value) {
-                    return DropdownMenuItem<Player>(
+                  items: users.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
                       value: value,
-                      child: Text(value.name),
+                      child: Text(value),
                     );
                   }).toList(),
                 ),
@@ -119,22 +145,18 @@ class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
         body: TabBarView(
           children: [
             // Draft Order tab
+            // Draft Order tab
             Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: Text('Draft Order', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  child: Text('Draft Order',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
-                Text('Pick one player at a time', style: TextStyle(color: Colors.grey)),
-                Text('Current turn: ${widget.draftState.currentUser.name}'),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.draftState.nextTurn();
-                    });
-                  },
-                  child: Text('Next Turn'),
-                ),
+                Text('Pick one player at a time',
+                    style: TextStyle(color: Colors.grey)),
+                Text('Current turn: ${draftState.currentUser}'),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
@@ -149,7 +171,7 @@ class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
                             selectedPlayer = null;
                           });
                         },
-                        items: players.map((player) => player.team).toSet().map<DropdownMenuItem<String>>((String value) {
+                        items: players.map((player) => player.team).map<DropdownMenuItem<String>>((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
                             child: Text(value),
@@ -165,7 +187,11 @@ class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
                               selectedPlayer = null;
                             });
                           },
-                          items: players.where((player) => player.team == selectedTeam).map((player) => player.position).toSet().map<DropdownMenuItem<String>>((String value) {
+                          items: players
+                              .where((player) => player.team == selectedTeam)
+                              .map((player) => player.position)
+                              .toSet()
+                              .map<DropdownMenuItem<String>>((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Text(value),
@@ -180,7 +206,11 @@ class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
                               selectedPlayer = newValue;
                             });
                           },
-                          items: players.where((player) => player.team == selectedTeam && player.position == selectedPosition).map<DropdownMenuItem<Player>>((Player value) {
+                          items: players
+                              .where((player) =>
+                                  player.team == selectedTeam &&
+                                  player.position == selectedPosition)
+                              .map<DropdownMenuItem<Player>>((Player value) {
                             return DropdownMenuItem<Player>(
                               value: value,
                               child: Text(value.name),
@@ -190,35 +220,35 @@ class _FantasyLeagueDraftState extends State<FantasyLeagueDraft> {
                     ],
                   ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {}, // Handle player skip action
-                      child: Text('Skip'),
-                      style: ElevatedButton.styleFrom(
-                        primary: Colors.red,
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: selectedPlayer == null ? null : () async {
-                        await users[0].draftPlayer(selectedPlayer!);
-                        setState(() {
-                          selectedPlayer = null;
-                        });
-                      },
-                      child: Text('Draft'),
-                      style: ElevatedButton.styleFrom(
-                        primary: Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
+
             // My Team tab
             Center(child: Text('No content')),
           ],
+        ),
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: () {}, // Handle player skip action
+                child: Text('Skip'),
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.red,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    draftState.nextTurn();
+                  });
+                },
+                child: Text('Next Turn'),
+              ),
+            ],
+          ),
         ),
       ),
     );
